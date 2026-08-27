@@ -2,29 +2,81 @@
 
 Thanks for your interest. This document explains how to set up a development environment, follow our workflow, and submit changes.
 
-## Workflow
+## Workflow (Git Flow)
 
-1. Fork the repo (external contributors) or create a feature branch (maintainers).
-2. Create a **local worktree** for your work:
+The repo uses [git-flow](https://nvie.com/posts/a-successful-git-branching-model/) with `main` as the production branch and `develop` as the integration branch:
 
-   ```bash
-   git worktree add ../httpSession-<slug> -b feature/<slug>
-   cd ../httpSession-<slug>
-   bun install
-   ```
+- `main` — production releases. Tagged with `vX.Y.Z`. Never commit directly.
+- `develop` — integration. The base for every new `feature/*` branch.
+- `feature/<slug>` — short-lived branches for new functionality. Branched from `develop`, merged back into `develop` via PR.
+- `release/<version>` — release-candidate branches. Branched from `develop`, merged into both `main` and `develop`.
+- `hotfix/<slug>` — urgent fixes for `main`. Branched from `main`, merged into both `main` and `develop`.
+- `support/<slug>` — long-lived maintenance branches.
 
-3. Write tests first (RED), then the smallest passing implementation (GREEN), then refactor (REFACTOR). See `docs/superpowers/plans/` for example task briefs.
-4. Commit using [Conventional Commits](https://www.conventionalcommits.org/) — the `commit-msg` Husky hook enforces this locally; CI enforces it on PR titles.
-5. Open a PR using the [PR template](./.github/PULL_REQUEST_TEMPLATE.md).
-6. Wait for CI green + a reviewer approval.
+The git-flow CLI is wired (production = `main`, development = `develop`, prefixes `feature/`, `release/`, `hotfix/`, `support/`, tags `v`). Run `git flow config` to inspect.
 
-## Branch naming
+## Daily flow with worktrees
 
-- `feature/<slug>` — new functionality
-- `fix/<slug>` — bug fix
-- `chore/<slug>` — tooling, infra, refactors with no behavior change
-- `docs/<slug>` — documentation only
-- `perf/<slug>` — performance improvements
+Always work in an isolated local worktree. The worktree lives **outside** the main repo directory so both the integration branch and your feature branch stay usable in parallel:
+
+```bash
+# First-time setup
+git worktree add ../httpSession-develop develop        # if develop is not already checked out
+cd ../httpSession-develop && bun install
+
+# Start a new feature
+git flow feature start <slug>                          # branches feature/<slug> off develop
+git worktree add ../httpSession-<slug> feature/<slug>  # optional: isolated worktree
+cd ../httpSession-<slug> && bun install
+
+# Finish a feature (locally)
+git flow feature finish <slug>                         # merges feature/<slug> back into develop
+
+# Open the PR against develop once CI is green
+gh pr create --base develop --head feature/<slug>
+```
+
+## Releases
+
+When `develop` has accumulated enough work for a release:
+
+```bash
+git flow release start 0.2.0                            # branches release/0.2.0 off develop
+# bump the version, fix last-minute bugs, regenerate CHANGELOG, etc.
+git flow release finish 0.2.0                           # merges release/0.2.0 into main + develop, tags v0.2.0
+```
+
+The first release (`v0.1.0`) is bootstrapped manually because release-please needs at least one tag to start tracking versions.
+
+## Hotfixes
+
+Urgent fixes that can't wait for a normal release flow:
+
+```bash
+git flow hotfix start <slug>                            # branches hotfix/<slug> off main
+# fix the bug, bump patch version
+git flow hotfix finish <slug>                           # merges hotfix/<slug> into main + develop, tags vX.Y.(Z+1)
+```
+
+## Testing & TDD
+
+- Strict RED → GREEN → REFACTOR. Write the failing test first, watch it fail, then implement.
+- Vitest (`bun run test:vitest`) for unit + integration tests with mocks.
+- Bun test (`bun run test:bun`) for cross-runtime compatibility checks.
+- Every commit must pass `bun run lint && bun run typecheck && bun run test`.
+
+## Commit conventions
+
+[Conventional Commits](https://www.conventionalcommits.org/) are mandatory. The `commit-msg` Husky hook enforces them locally; CI enforces them on PR titles. Allowed types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `style`, `revert`.
+
+Examples:
+
+```
+feat(client): add cancellation propagation to transport
+fix(state): freeze completion snapshot in FailureState
+chore(deps): bump zod to 4.5.0
+docs(readme): document error class hierarchy
+```
 
 ## Local commands
 
@@ -35,25 +87,6 @@ bun run lint:fix     # biome check --write (auto-fix)
 bun run typecheck    # tsc --noEmit
 bun run test         # vitest + bun test
 bun run test:coverage
-```
-
-## Testing
-
-- Vitest (`bun run test:vitest`) for unit + integration tests with mocks.
-- Bun test (`bun run test:bun`) for cross-runtime compatibility checks — these run against the real Bun runtime and may hit network fixtures.
-- Strict TDD: every behavior change ships with a test that fails without it.
-
-## Commit conventions
-
-Allowed types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `style`, `revert`.
-
-Examples:
-
-```
-feat(client): add cancellation propagation to transport
-fix(state): freeze completion snapshot in FailureState
-chore(deps): bump zod to 4.5.0
-docs(readme): document error class hierarchy
 ```
 
 ## Code of Conduct
