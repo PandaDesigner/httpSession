@@ -3,11 +3,22 @@
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
-  "exports": {
-    ".": "./src/index.ts"
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.1.0"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
   "scripts": {
     "prepare": "husky",
+    "build": "bun run scripts/build.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -15,6 +26,7 @@
     "test": "bun run test:vitest && bun run test:bun",
     "test:vitest": "vitest run",
     "test:bun": "bun test tests/bun",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "lint-staged": {
@@ -28,6 +40,7 @@
     "@biomejs/biome": "^1.9.4",
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.1",
+    "@types/bun": "^1.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
     "typescript": "^7.0.2",
