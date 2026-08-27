@@ -3,7 +3,7 @@
 > A typed, lifecycle-aware HTTP client for TypeScript runtimes — browsers, React Native, Node.js, and Bun.
 
 [![CI](https://github.com/PandaDesigner/httpSession/actions/workflows/ci.yml/badge.svg)](https://github.com/PandaDesigner/httpSession/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/http-session)](https://www.npmjs.com/package/http-session)
+[![npm version](https://img.shields.io/npm/v/http-session-core)](https://www.npmjs.com/package/http-session-core
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 ## TL;DR

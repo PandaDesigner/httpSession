@@ -18,8 +18,8 @@ The first release is bootstrapped manually:
 
 1. Verify the release PR title is `chore(main): release 0.1.0`.
 2. Merge it.
-3. Confirm the GitHub Release exists at `https://github.com/USER/httpSession/releases/tag/v0.1.0`.
-4. Confirm the npm package is visible at `https://www.npmjs.com/package/http-session`.
+3. Confirm the GitHub Release exists at `https://github.com/PandaDesigner/httpSession/releases/tag/v0.1.0`.
+4. Confirm the npm package is visible at `https://www.npmjs.com/package/http-session-core`.
 
 ## Rollback
 

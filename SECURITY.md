@@ -11,7 +11,7 @@
 
 **Please do not file a public issue.** Use one of these private channels:
 
-- GitHub Security Advisories: open a draft advisory at `https://github.com/USER/httpSession/security/advisories/new`.
+- GitHub Security Advisories: open a draft advisory at `https://github.com/PandaDesigner/httpSession/security/advisories/new`.
 - Email: `security@http-session.example` (placeholder — replace with a real monitored address before publishing).
 
 We will acknowledge within **48 hours** and aim to ship a fix within **7 days** for high-severity issues.
