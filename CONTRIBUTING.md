@@ -95,4 +95,4 @@ By participating, you agree to abide by the [Contributor Covenant](./CODE_OF_CON
 
 ## Questions
 
-Open a [discussion](https://github.com/USER/httpSession/discussions) or a [feature request](./.github/ISSUE_TEMPLATE/feature_request.md).
+Open a [discussion](https://github.com/PandaDesigner/httpSession/discussions) or a [feature request](./.github/ISSUE_TEMPLATE/feature_request.md).
