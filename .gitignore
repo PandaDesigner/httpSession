@@ -1,2 +1,11 @@
 .opencode
 .worktrees/
+.worktrees-infra/
+# Local Pi runtime state
+.atl/
+# Build output
+dist/
+# Coverage reports
+coverage/
+# Bun binary lock (kept; bun.lock text lock is committed)
+bun.lockb
