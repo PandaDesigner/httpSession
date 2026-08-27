@@ -47,8 +47,16 @@ export class HttpRequest<T> {
   }
 
   start(): Promise<RequestCompletion<T>> {
-    if (this.#state instanceof PendingState) return this.#inFlight!;
-    if (!(this.#state instanceof IdleState)) return Promise.resolve(this.#state.completion!);
+    if (this.#state instanceof PendingState) {
+      const inFlight = this.#inFlight as Promise<RequestCompletion<T>> | undefined;
+      if (inFlight === undefined) throw new Error('in-flight promise missing for pending state');
+      return inFlight;
+    }
+    if (!(this.#state instanceof IdleState)) {
+      const completion = this.#state.completion as RequestCompletion<T> | undefined;
+      if (completion === undefined) throw new Error('completion missing for terminal state');
+      return Promise.resolve(completion);
+    }
 
     let settle!: (completion: RequestCompletion<T>) => void;
     const inFlight = new Promise<RequestCompletion<T>>(resolve => {

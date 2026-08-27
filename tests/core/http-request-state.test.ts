@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { HttpRequest, NetworkError } from "../../src";
+import type { RequestCompletion } from "../../src/core/request-completion";
 
 describe("HttpRequest lifecycle", () => {
   it("notifies idle, pending, and success snapshots", async () => {
@@ -71,13 +72,21 @@ describe("HttpRequest lifecycle", () => {
 
     request.subscribe(snapshot => {
       if (snapshot.state !== "success") return;
-      const data = snapshot.completion!.data as { user: { name: string } };
+      const completion = snapshot.completion as Extract<
+        RequestCompletion<{ user: { name: string } }>,
+        { status: "success" }
+      >;
+      const data = completion.data;
       data.user.name = "Tampered";
     });
     request.subscribe(snapshot => {
       if (snapshot.state !== "success") return;
       terminalSnapshot = snapshot;
-      observedName = (snapshot.completion!.data as { user: { name: string } }).user.name;
+      const completion = snapshot.completion as Extract<
+        RequestCompletion<{ user: { name: string } }>,
+        { status: "success" }
+      >;
+      observedName = completion.data.user.name;
     });
 
     await request.start();
