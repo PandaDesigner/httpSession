@@ -1,5 +1,5 @@
 import type { TransferProgress } from "../progress/transfer-progress";
-import { CancelledError } from "./errors";
+import { CancelledError, NetworkError } from "./errors";
 import type { RequestCompletion } from "./request-completion";
 import {
   CancelledState,
@@ -36,7 +36,7 @@ export class HttpRequest<T> {
 
   subscribe(subscriber: RequestSubscriber<T>): () => void {
     this.#subscribers.add(subscriber);
-    subscriber(this.#snapshot());
+    this.#emit(subscriber, this.#snapshot());
 
     let subscribed = true;
     return () => {
@@ -51,10 +51,8 @@ export class HttpRequest<T> {
     if (!(this.#state instanceof IdleState)) return Promise.resolve(this.#state.completion!);
 
     let settle!: (completion: RequestCompletion<T>) => void;
-    let reject!: (error: unknown) => void;
-    const inFlight = new Promise<RequestCompletion<T>>((resolve, rejectPromise) => {
+    const inFlight = new Promise<RequestCompletion<T>>(resolve => {
       settle = resolve;
-      reject = rejectPromise;
     });
     this.#inFlight = inFlight;
     this.#resolveInFlight = settle;
@@ -67,14 +65,19 @@ export class HttpRequest<T> {
       .then(
         completion => {
           if (this.#state instanceof PendingState) {
-            this.#transition(this.#state.complete(completion));
-            this.#settle(completion);
+            const nextState = this.#state.complete(completion);
+            this.#transition(nextState);
+            this.#settle(nextState.completion);
           }
         },
         error => {
           if (this.#state instanceof PendingState) {
-            this.#resolveInFlight = undefined;
-            reject(error);
+            const nextState = this.#state.complete({
+              status: "failure",
+              error: new NetworkError("Request execution failed", { cause: error }),
+            });
+            this.#transition(nextState);
+            this.#settle(nextState.completion);
           }
         },
       );
@@ -89,8 +92,9 @@ export class HttpRequest<T> {
       status: "failure",
       error: new CancelledError(),
     };
-    this.#transition(this.#state.cancel(completion));
-    this.#settle(completion);
+    const nextState = this.#state.cancel(completion);
+    this.#transition(nextState);
+    this.#settle(nextState.completion);
   }
 
   /** Receives measurement data from future transport orchestration. */
@@ -113,7 +117,15 @@ export class HttpRequest<T> {
 
   #notify(): void {
     const snapshot = this.#snapshot();
-    for (const subscriber of this.#subscribers) subscriber(snapshot);
+    for (const subscriber of this.#subscribers) this.#emit(subscriber, snapshot);
+  }
+
+  #emit(subscriber: RequestSubscriber<T>, snapshot: RequestSnapshot<T>): void {
+    try {
+      subscriber(snapshot);
+    } catch {
+      // Subscribers are observers; their failures cannot alter request lifecycle state.
+    }
   }
 
   #snapshot(): RequestSnapshot<T> {
