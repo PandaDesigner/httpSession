@@ -9,3 +9,5 @@ dist/
 coverage/
 # Bun binary lock (kept; bun.lock text lock is committed)
 bun.lockb
+# GitHub Actions caches
+.github/.cache/
