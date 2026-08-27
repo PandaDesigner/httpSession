@@ -13,3 +13,8 @@ export {
   UnsupportedCapabilityError,
 } from "./core/errors";
 export type { HttpErrorCode } from "./core/errors";
+
+export { HttpRequest } from "./core/http-request";
+export type { RequestExecutor, RequestSubscriber } from "./core/http-request";
+export type { RequestSnapshot, RequestStateName } from "./core/request-state";
+export type { TransferProgress } from "./progress/transfer-progress";
