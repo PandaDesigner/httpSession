@@ -14,8 +14,11 @@ export {
 } from './core/errors'
 export type { HttpErrorCode } from './core/errors'
 
+export { createHttpClient } from './core/http-client'
+export type { HttpClient, HttpClientConfig } from './core/http-client'
 export { HttpRequest } from './core/http-request'
 export type { RequestExecutor, RequestSubscriber } from './core/http-request'
+export type { RequestOptions } from './core/request-options'
 export type { RequestSnapshot, RequestStateName } from './core/request-state'
 export type { TransferProgress } from './progress/transfer-progress'
 
