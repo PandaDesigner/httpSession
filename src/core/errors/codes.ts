@@ -1,0 +1,8 @@
+export type HttpErrorCode =
+  | 'INVALID_REQUEST'
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'CANCELLED'
+  | 'HTTP_STATUS_ERROR'
+  | 'DECODE_ERROR'
+  | 'UNSUPPORTED_CAPABILITY'
