@@ -26,7 +26,7 @@ Comprehensive examples for `httpSession`. Looking for the API surface? See [READ
 ## Install
 
 ```bash
-bun add http-session         # or npm install / pnpm add / yarn add
+bun add http-session-core    # or npm install / pnpm add / yarn add
 ```
 
 `httpSession` has one runtime dependency: [`zod`](https://zod.dev) (^4.4.3). Everything else uses platform globals (`fetch`, `Headers`, `ReadableStream`, `AbortController`).
@@ -34,7 +34,7 @@ bun add http-session         # or npm install / pnpm add / yarn add
 ## Quick start
 
 ```ts
-import { createHttpClient } from 'http-session'
+import { createHttpClient } from 'http-session-core'
 import { z } from 'zod'
 
 const User = z.object({ id: z.string(), name: z.string() })
@@ -350,7 +350,7 @@ The default `HttpTransport` uses `FetchStrategy` (a single strategy backed by `g
 3. Layer strategies with capability-based fallback.
 
 ```ts
-import { createHttpClient, FetchStrategy, HttpTransport } from 'http-session'
+import { createHttpClient, FetchStrategy, HttpTransport } from 'http-session-core'
 
 // Inject a custom fetch implementation
 const client = createHttpClient({
@@ -376,7 +376,7 @@ Inject a `vi.fn()` (Vitest) or `spyOn` (Jest) as the fetch implementation. The p
 
 ```ts
 import { describe, expect, it, vi } from 'vitest'
-import { createHttpClient, FetchStrategy, HttpTransport } from 'http-session'
+import { createHttpClient, FetchStrategy, HttpTransport } from 'http-session-core'
 import { z } from 'zod'
 
 it('decodes a user', async () => {

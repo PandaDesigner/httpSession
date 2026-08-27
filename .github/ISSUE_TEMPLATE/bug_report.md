@@ -27,7 +27,7 @@ What actually happens. Include error messages, stack traces, and screenshots if 
 
 ## Environment
 
-- `http-session` version: <!-- e.g. 0.1.0 -->
+- `http-session-core` version: <!-- e.g. 0.1.0 -->
 - Runtime: <!-- bun 1.x / node 20 / browser X / react-native Y -->
 - OS: <!-- macOS / Linux / Windows -->
 

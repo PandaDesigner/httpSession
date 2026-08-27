@@ -1,5 +1,5 @@
 {
-  "name": "http-session",
+  "name": "http-session-core",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
