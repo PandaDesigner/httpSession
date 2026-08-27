@@ -50,57 +50,18 @@ const client = createHttpClient({
 })
 ```
 
-## Cancellation
+## Usage guide
 
-```ts
-const request = client.get('/users/1', { schema: User })
-const completion = request.start()
+The full guide covers methods, headers, bodies, schemas, status policies, timeouts, cancellation, progress, lifecycle, error handling, custom transports, testing, and runtime compatibility:
 
-request.cancel() // → RequestCompletion failure with CancelledError
-```
+**[docs/usage.md](./docs/usage.md)**
 
-## Timeout
+A short tour:
 
-```ts
-const client = createHttpClient({
-  baseUrl: 'https://api.example.com',
-  timeoutMs: 5_000,
-  transport: new HttpTransport([new FetchStrategy()]),
-})
-
-await client.get('/slow', { schema: z.unknown() }).start()
-// If the request exceeds 5s → TimeoutError (TIMEOUT)
-```
-
-## Download progress
-
-`onProgress` fires after every body chunk with cumulative `loaded`, the optional `total` (from `Content-Length`), and the computed `percentage` when the total is known.
-
-```ts
-await client
-  .get('/files/report.pdf', {
-    schema: z.unknown(),
-    onProgress: ({ loaded, total, percentage }) => {
-      console.log(percentage ?? `${loaded} bytes`)
-    },
-  })
-  .start()
-```
-
-Subscribers also see progress through `HttpRequest.subscribe(snapshot => ...)` — `snapshot.progress` is populated while the request is `pending`.
-
-## Custom status policy
-
-The default policy accepts `200...299`. Override it per request to accept additional ranges:
-
-```ts
-await client
-  .get('/teapot', {
-    schema: z.unknown(),
-    statusPolicy: { accepts: (status) => status === 418 },
-  })
-  .start()
-```
+- **Cancellation** — `request.cancel()` settles the in-flight promise with `CancelledError`.
+- **Timeouts** — `timeoutMs` per-client or per-request; deadline expiry surfaces as `TimeoutError`.
+- **Download progress** — `onProgress` callback plus lifecycle subscribers; `percentage` is computed when `Content-Length` is present.
+- **Custom status policy** — `{ accepts: (status) => boolean }`, per-client or per-request.
 
 ## API
 
@@ -119,7 +80,7 @@ await client
 | Error classes | value | `HttpError`, `HttpStatusError`, `NetworkError`, `TimeoutError`, `CancelledError`, `DecodeError`, `InvalidRequestError`, `UnsupportedCapabilityError` |
 | `HTTP_SESSION_VERSION` | const | Package version marker |
 
-See `docs/superpowers/specs/2026-08-26-http-session-design.md` for the full architecture.
+See `docs/superpowers/specs/2026-08-26-http-session-design.md` for the architecture.
 
 ## Architecture
 
