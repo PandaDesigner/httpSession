@@ -1,9 +1,11 @@
 import type { StatusPolicy } from '../policies/status-policy'
 import { successfulStatusPolicy } from '../policies/status-policy'
+import { readWithProgress } from '../progress/read-with-progress'
 import type { HttpTransport } from '../transport/http-transport'
 import type {
   TransportCapabilities,
   TransportContext,
+  TransportProgressEvent,
   TransportRequest,
   TransportResponse,
 } from '../transport/transport-types'
@@ -63,6 +65,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
 
       const controller = new AbortController()
       let userCancelled = false
+      const requestRef: { current: HttpRequest<T> | undefined } = { current: undefined }
 
       const executor = async (): Promise<RequestCompletion<T>> => {
         const timeoutHandle = scheduleTimeout(timeoutMs, controller, () => userCancelled)
@@ -82,15 +85,23 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
         clearTimeoutHandle(timeoutHandle)
 
         if (!statusPolicy.accepts(response.status)) {
-          const body = await safeReadBody(response.body)
+          const body = await readBodyAsString(response.body)
           return {
             status: 'failure',
             error: new HttpStatusError(response.status, response.statusText, body),
           }
         }
 
-        const raw = await safeReadBody(response.body)
-        const parsed = parseAsJson(raw)
+        const expectedTotal = readContentLength(response.headers)
+        const userProgress = options.onProgress
+        const bytes = await readWithProgress(response.body, expectedTotal, (progress) => {
+          if (userProgress !== undefined) userProgress(progress)
+          // Forward to lifecycle subscribers; reportProgress is a no-op once
+          // the request has reached a terminal state.
+          requestRef.current?.reportProgress(progress)
+        })
+        const text = new TextDecoder().decode(bytes)
+        const parsed = parseAsJson(text)
         return decodeWithSchema(options.schema, parsed, {
           status: response.status,
           statusText: response.statusText,
@@ -99,6 +110,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
       }
 
       const request = new HttpRequest<T>(executor)
+      requestRef.current = request
       // Wire cancellation through the abort signal: the executor observes the
       // abort, but the user-facing completion is owned by HttpRequest.cancel().
       const originalCancel = request.cancel.bind(request)
@@ -113,8 +125,8 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
   }
 }
 
-function noop(): void {
-  /* progress callback default */
+function noop(_event: TransportProgressEvent): void {
+  /* default progress callback */
 }
 
 function buildUrl(baseUrl: string, path: string): string {
@@ -180,7 +192,15 @@ function mapTransportError(
   }
 }
 
-async function safeReadBody(stream: ReadableStream<Uint8Array>): Promise<string> {
+function readContentLength(headers: Headers): number | undefined {
+  const raw = headers.get('content-length')
+  if (raw === null) return undefined
+  const parsed = Number.parseInt(raw, 10)
+  if (Number.isNaN(parsed) || parsed <= 0) return undefined
+  return parsed
+}
+
+async function readBodyAsString(stream: ReadableStream<Uint8Array>): Promise<string> {
   const reader = stream.getReader()
   const decoder = new TextDecoder()
   let buffer = ''

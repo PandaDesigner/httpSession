@@ -21,6 +21,7 @@ export type { RequestExecutor, RequestSubscriber } from './core/http-request'
 export type { RequestOptions } from './core/request-options'
 export type { RequestSnapshot, RequestStateName } from './core/request-state'
 export type { TransferProgress } from './progress/transfer-progress'
+export { readWithProgress } from './progress/read-with-progress'
 
 export { FetchStrategy } from './transport/fetch-strategy'
 export { HttpTransport } from './transport/http-transport'
