@@ -18,3 +18,19 @@ export { HttpRequest } from './core/http-request'
 export type { RequestExecutor, RequestSubscriber } from './core/http-request'
 export type { RequestSnapshot, RequestStateName } from './core/request-state'
 export type { TransferProgress } from './progress/transfer-progress'
+
+export { FetchStrategy } from './transport/fetch-strategy'
+export { HttpTransport } from './transport/http-transport'
+export {
+  emptyTransportResponse,
+  selectStrategy,
+  strategySupports,
+} from './transport/transport-strategy'
+export type {
+  TransportCapabilities,
+  TransportContext,
+  TransportProgressEvent,
+  TransportRequest,
+  TransportResponse,
+  TransportStrategy,
+} from './transport/transport-types'
