@@ -34,3 +34,8 @@ export type {
   TransportResponse,
   TransportStrategy,
 } from './transport/transport-types'
+
+export { decodeWithSchema } from './validation/zod-decoder'
+export type { DecodeIssue } from './validation/zod-decoder'
+export { successfulStatusPolicy } from './policies/status-policy'
+export type { StatusPolicy } from './policies/status-policy'
