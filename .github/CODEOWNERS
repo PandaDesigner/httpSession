@@ -1,0 +1,4 @@
+# CODEOWNERS — defaults to the repository owner for every path.
+# Adjust as co-maintainers are added.
+
+* @USER
