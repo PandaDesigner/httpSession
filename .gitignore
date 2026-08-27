@@ -1,2 +1,4 @@
 .opencode
 .worktrees/
+# Local Pi runtime state
+.atl/
