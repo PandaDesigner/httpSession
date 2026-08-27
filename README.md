@@ -19,14 +19,13 @@ bun add http-session
 ## Quick start
 
 ```ts
-import { createHttpClient, FetchStrategy, HttpTransport } from 'http-session'
+import { createHttpClient } from 'http-session'
 import { z } from 'zod'
 
 const User = z.object({ id: z.string(), name: z.string() })
 
 const client = createHttpClient({
   baseUrl: 'https://api.example.com',
-  transport: new HttpTransport([new FetchStrategy()]),
 })
 
 const result = await client
@@ -38,6 +37,17 @@ if (result.status === 'success') {
 } else {
   console.error(result.error.code, result.error.message)
 }
+```
+
+The default transport uses the platform `fetch` via `FetchStrategy`. Inject one explicitly when you need to mock it in tests, swap in a polyfill for React Native or older runtimes, or layer alternative strategies:
+
+```ts
+import { createHttpClient, FetchStrategy, HttpTransport } from 'http-session'
+
+const client = createHttpClient({
+  baseUrl: 'https://api.example.com',
+  transport: new HttpTransport([new FetchStrategy(myFetchImpl)]),
+})
 ```
 
 ## Cancellation

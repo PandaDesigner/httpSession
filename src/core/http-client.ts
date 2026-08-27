@@ -1,7 +1,8 @@
 import type { StatusPolicy } from '../policies/status-policy'
 import { successfulStatusPolicy } from '../policies/status-policy'
 import { readWithProgress } from '../progress/read-with-progress'
-import type { HttpTransport } from '../transport/http-transport'
+import { FetchStrategy } from '../transport/fetch-strategy'
+import { HttpTransport } from '../transport/http-transport'
 import type {
   TransportCapabilities,
   TransportContext,
@@ -16,13 +17,13 @@ import type { RequestCompletion } from './request-completion'
 import type { RequestOptions } from './request-options'
 
 /**
- * Construction-time configuration for an HttpClient. The transport is required;
- * everything else has a sensible default. Per-request overrides flow through
- * {@link RequestOptions} when calling `client.get(...)`.
+ * Construction-time configuration for an HttpClient. The transport defaults to
+ * a single FetchStrategy backed by `globalThis.fetch`; inject one explicitly
+ * to swap in mocks, polyfills, or alternative strategies.
  */
 export interface HttpClientConfig {
   readonly baseUrl: string
-  readonly transport: HttpTransport
+  readonly transport?: HttpTransport
   readonly defaultHeaders?: HeadersInit
   readonly defaultStatusPolicy?: StatusPolicy
   readonly timeoutMs?: number
@@ -42,6 +43,7 @@ export interface HttpClient {
  * timeouts, and lifecycle subscriptions are isolated per request.
  */
 export function createHttpClient(config: HttpClientConfig): HttpClient {
+  const transport = config.transport ?? new HttpTransport([new FetchStrategy()])
   const defaultStatusPolicy: StatusPolicy = config.defaultStatusPolicy ?? successfulStatusPolicy
   const defaultTimeoutMs = config.timeoutMs
   const defaultHeaders = mergeHeaders(undefined, config.defaultHeaders)
@@ -77,7 +79,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
 
         let response: TransportResponse
         try {
-          response = await config.transport.execute(transportRequest, capabilities, context)
+          response = await transport.execute(transportRequest, capabilities, context)
         } catch (error) {
           clearTimeoutHandle(timeoutHandle)
           return mapTransportError(error, controller.signal, userCancelled, timeoutMs !== undefined)
