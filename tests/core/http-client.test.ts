@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import {
+  BinaryBodyError,
   CancelledError,
   FetchStrategy,
   HttpStatusError,
@@ -76,6 +77,60 @@ describe('HttpClient.get', () => {
 
   it('returns DecodeError when the schema rejects the response', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 'not-a-number' }))
+    const client = createHttpClient({
+      baseUrl: 'https://example.test',
+      transport: new HttpTransport([new FetchStrategy(fetchMock)]),
+    })
+
+    const completion = await client
+      .get('/users/1', { schema: z.object({ id: z.number() }) })
+      .start()
+
+    expect(completion.status).toBe('failure')
+    if (completion.status === 'failure') {
+      expect(completion.error.code).toBe('DECODE_ERROR')
+    }
+  })
+
+  it('returns BinaryBodyError when the response body starts with the zstd magic', async () => {
+    // 0x28 0xb5 0x2f 0xfd is the zstd frame magic (RFC 8478).
+    const zstdPayload = new Uint8Array([
+      0x28, 0xb5, 0x2f, 0xfd, 0x04, 0x58, 0x4d, 0x4c, 0x20, 0xb1, 0x63, 0x00, 0x00, 0x00, 0x00,
+      0x00,
+    ])
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(zstdPayload, {
+        status: 200,
+        statusText: 'OK',
+        // No Content-Encoding — emulates a dev proxy that forgot to forward it.
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    const client = createHttpClient({
+      baseUrl: 'https://example.test',
+      transport: new HttpTransport([new FetchStrategy(fetchMock)]),
+    })
+
+    const completion = await client.get('/users/1', { schema: z.unknown() }).start()
+
+    expect(completion.status).toBe('failure')
+    if (completion.status === 'failure') {
+      expect(completion.error).toBeInstanceOf(BinaryBodyError)
+      expect(completion.error.code).toBe('BINARY_BODY')
+      expect(completion.error.message).toMatch(/Content-Encoding/)
+    }
+  })
+
+  it('still surfaces a regular DecodeError when the body is text but not JSON', async () => {
+    // HTML error page that JSON.parse rejects — but no binary indicators.
+    // parseAsJson must fall through and let the schema decide.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('<!doctype html><html>oops</html>', {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'text/html' },
+      }),
+    )
     const client = createHttpClient({
       baseUrl: 'https://example.test',
       transport: new HttpTransport([new FetchStrategy(fetchMock)]),

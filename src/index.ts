@@ -3,6 +3,7 @@ export const HTTP_SESSION_VERSION = '0.1.0' as const
 export type { HttpResponseMetadata } from './core/http-response-metadata'
 export type { RequestCompletion } from './core/request-completion'
 export {
+  BinaryBodyError,
   CancelledError,
   DecodeError,
   HttpError,
@@ -39,7 +40,7 @@ export type {
   TransportStrategy,
 } from './transport/transport-types'
 
-export { decodeWithSchema } from './validation/zod-decoder'
+export { decodeWithSchema, formatDecodeError } from './validation/zod-decoder'
 export type { DecodeIssue } from './validation/zod-decoder'
 export { successfulStatusPolicy } from './policies/status-policy'
 export type { StatusPolicy } from './policies/status-policy'
