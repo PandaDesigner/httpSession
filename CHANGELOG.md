@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/PandaDesigner/httpSession/compare/v1.0.1...v1.1.0) (2026-08-28)
+
+
+### Features
+
+* **validation:** flatten invalid_union issues in DecodeError ([9277469](https://github.com/PandaDesigner/httpSession/commit/927746980189df14b119e2db72e503f2612c66e9))
+
 ## [1.0.1](https://github.com/PandaDesigner/httpSession/compare/v1.0.0...v1.0.1) (2026-08-28)
 
 
