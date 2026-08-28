@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/PandaDesigner/httpSession/compare/v1.1.0...v1.2.0) (2026-08-28)
+
+
+### Features
+
+* **errors:** add BinaryBodyError and formatDecodeError utility ([5b6f7fa](https://github.com/PandaDesigner/httpSession/commit/5b6f7fab792dd7aebba0af97f2e49a3df5462c01))
+
 ## [1.1.0](https://github.com/PandaDesigner/httpSession/compare/v1.0.1...v1.1.0) (2026-08-28)
 
 
