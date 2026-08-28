@@ -204,7 +204,7 @@ The existing `src/core/` stays. New directories are introduced as Tasks 4–7 la
 
 ```json
 {
-  "name": "http-session",
+  "name": "http-session-core",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
@@ -247,7 +247,7 @@ Structure (English, the package is for an English-speaking developer audience):
 1. Title + tagline
 2. Badges: CI, npm version, license, coverage (when available)
 3. TL;DR (5 lines explaining what it is and why)
-4. Install (`bun add http-session` — placeholder until publish)
+4. Install (`bun add http-session-core` — placeholder until publish)
 5. Quick start (5-line code sample)
 6. API surface (table of public exports)
 7. Architecture diagram (text-based, links to spec)
@@ -333,7 +333,7 @@ After this lands on `main`, we resume the core workstream on `feature/http-sessi
 - Multi-runtime CI matrices beyond Node 20 + Bun latest (no Deno, no edge runtimes yet).
 - Public benchmark suite (planned post-1.0).
 - Visual regression / example app.
-- npm organization scope (publishing as `@scope/http-session`).
+- npm organization scope (publishing as `@scope/http-session-core`).
 - Localization of `README.md` (English only for now).
 
 ---

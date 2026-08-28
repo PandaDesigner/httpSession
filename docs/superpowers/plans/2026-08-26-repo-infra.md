@@ -21,7 +21,7 @@
 - Never commit `node_modules/`, `bun.lock` is allowed (and committed).
 - Never create a commit with `Co-Authored-By:` or AI attribution lines.
 - Use English for all code identifiers, file names, comments, commit messages, and documentation copy.
-- Repo name (`httpSession`) and package name (`http-session`) are **intentionally different** — do not rename either.
+- Repo name (`httpSession`) and package name (`http-session-core`) are **intentionally different** — do not rename either.
 - Use a local worktree for the implementation: `git worktree add ../httpSession-infra -b feature/repo-infra-and-cicd`. The worktree path is **outside** the existing `httpSession/.worktrees/` directory to keep both worktrees (core + infra) usable in parallel.
 
 ## File Structure
@@ -491,7 +491,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: node
-          package-name: http-session
+          package-name: http-session-core
 
       - name: Publish to npm
         if: ${{ steps.release.outputs.release_created }}
@@ -670,7 +670,7 @@ Create `README.md`:
 > A typed, lifecycle-aware HTTP client for TypeScript runtimes — browsers, React Native, Node.js, and Bun.
 
 [![CI](https://github.com/USER/httpSession/actions/workflows/ci.yml/badge.svg)](https://github.com/USER/httpSession/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/http-session)](https://www.npmjs.com/package/http-session)
+[![npm version](https://img.shields.io/npm/v/http-session-core)](https://www.npmjs.com/package/http-session-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 ## TL;DR
@@ -680,13 +680,13 @@ Create `README.md`:
 ## Install
 
 ```bash
-bun add http-session
+bun add http-session-core
 ```
 
 ## Quick start
 
 ```ts
-import { HttpClient } from "http-session";
+import { HttpClient } from "http-session-core";
 import { z } from "zod";
 
 const User = z.object({ id: z.string(), name: z.string() });
@@ -826,7 +826,7 @@ The first release is bootstrapped manually:
 1. Verify the release PR title is `chore(main): release 0.1.0`.
 2. Merge it.
 3. Confirm the GitHub Release exists at `https://github.com/USER/httpSession/releases/tag/v0.1.0`.
-4. Confirm the npm package is visible at `https://www.npmjs.com/package/http-session`.
+4. Confirm the npm package is visible at `https://www.npmjs.com/package/http-session-core`.
 
 ## Rollback
 
@@ -969,7 +969,7 @@ What actually happens. Include error messages, stack traces, and screenshots if 
 
 ## Environment
 
-- `http-session` version: <!-- e.g. 0.1.0 -->
+- `http-session-core` version: <!-- e.g. 1.0.0 -->
 - Runtime: <!-- bun 1.x / node 20 / browser X / react-native Y -->
 - OS: <!-- macOS / Linux / Windows -->
 

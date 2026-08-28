@@ -13,7 +13,7 @@
 ## Install
 
 ```bash
-bun add http-session
+bun add http-session-core
 ```
 
 ## Quick start
