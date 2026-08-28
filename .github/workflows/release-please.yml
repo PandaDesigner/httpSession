@@ -24,7 +24,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: node
-          package-name: http-session-core
 
       - name: Publish to npm
         if: ${{ secrets.NPM_TOKEN != '' && (steps.release.outputs.release_created || github.event_name == 'workflow_dispatch') }}
