@@ -11,7 +11,13 @@ import type {
   TransportResponse,
 } from '../transport/transport-types'
 import { decodeWithSchema } from '../validation/zod-decoder'
-import { CancelledError, HttpStatusError, NetworkError, TimeoutError } from './errors'
+import {
+  BinaryBodyError,
+  CancelledError,
+  HttpStatusError,
+  NetworkError,
+  TimeoutError,
+} from './errors'
 import { HttpRequest } from './http-request'
 import type { RequestCompletion } from './request-completion'
 import type { RequestOptions } from './request-options'
@@ -104,7 +110,10 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
         })
         const text = new TextDecoder().decode(bytes)
         const parsed = parseAsJson(text)
-        return decodeWithSchema(options.schema, parsed, {
+        if (parsed.kind === 'binary') {
+          return parsed.completion
+        }
+        return decodeWithSchema(options.schema, parsed.value, {
           status: response.status,
           statusText: response.statusText,
           headers: response.headers,
@@ -219,13 +228,72 @@ async function readBodyAsString(stream: ReadableStream<Uint8Array>): Promise<str
   return buffer
 }
 
-function parseAsJson(raw: string): unknown {
-  if (raw === '') return undefined
+type ParseAsJsonResult =
+  | { readonly kind: 'parsed'; readonly value: unknown }
+  | { readonly kind: 'binary'; readonly completion: RequestCompletion<never> }
+
+function parseAsJson(raw: string): ParseAsJsonResult {
+  if (raw === '') return { kind: 'parsed', value: undefined }
   try {
-    return JSON.parse(raw)
+    return { kind: 'parsed', value: JSON.parse(raw) }
   } catch {
+    if (looksBinary(raw)) {
+      const bytes = new TextEncoder().encode(raw.slice(0, 32))
+      const hex = Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join(' ')
+      return {
+        kind: 'binary',
+        completion: {
+          status: 'failure',
+          error: new BinaryBodyError(
+            `Response body looks binary or compressed (${raw.length} bytes). Likely cause: a dev proxy stripped the Content-Encoding header. First bytes: ${hex}`,
+          ),
+        },
+      }
+    }
     // Surface the raw text so the schema's own validator produces a typed
     // DecodeError rather than the client deciding the body was invalid JSON.
-    return raw
+    return { kind: 'parsed', value: raw }
   }
+}
+
+/**
+ * Heuristic detector for compressed/binary response bodies. Operates on the
+ * already-TextDecoder-decoded string: control characters are checked on
+ * JavaScript char codes (UTF-16 code units), while compression magics are
+ * checked against UTF-8 bytes (since the magic numbers are byte sequences
+ * defined in their respective RFCs).
+ */
+function looksBinary(raw: string): boolean {
+  const sample = raw.slice(0, 256)
+  const bytes = new TextEncoder().encode(sample)
+
+  // Known compression magics (UTF-8 bytes).
+  if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) return true
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0x28 &&
+    bytes[1] === 0xb5 &&
+    bytes[2] === 0x2f &&
+    bytes[3] === 0xfd
+  ) {
+    return true
+  }
+
+  // Char-code scan for control bytes and the non-printable ratio. Counts the
+  // ratio against `sample.length` (JS chars) so legitimate non-ASCII text
+  // (e.g. accented Latin) doesn't trip the threshold just because of UTF-8
+  // multi-byte expansion.
+  let nonPrintable = 0
+  for (let i = 0; i < sample.length; i++) {
+    const code = sample.charCodeAt(i)
+    if (code === 0x00) return true
+    if (code === 0x7f) return true
+    if (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d) return true
+    if (code < 0x20 || code > 0x7e) nonPrintable++
+  }
+  if (sample.length > 0 && nonPrintable / sample.length > 0.3) return true
+
+  return false
 }

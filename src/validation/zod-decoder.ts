@@ -68,3 +68,32 @@ function flattenIssues(rawIssues: readonly z.core.$ZodIssue[]): readonly DecodeI
   }
   return out
 }
+
+/**
+ * Formats a `DecodeError` into a multi-line, log-friendly string. Each line
+ * is shaped as `  - [<code>] <dot.path or '<root>'>: <message>`, mirroring
+ * the normalized `issues` array that `decodeWithSchema` attaches to the
+ * error. Returns `(no issues attached)` if the error carries no issues.
+ *
+ * Branch on `result.error.code === 'DECODE_ERROR'` first; this helper is
+ * only useful when you have a `DecodeError` instance.
+ *
+ * @example
+ * ```ts
+ * if (result.error.code === 'DECODE_ERROR') {
+ *   console.error('[api] schema rejected:\n' + formatDecodeError(result.error))
+ * }
+ * ```
+ */
+export function formatDecodeError(error: DecodeError): string {
+  const issues = (error as unknown as { issues?: readonly DecodeIssue[] }).issues
+  if (issues === undefined || issues.length === 0) {
+    return '(no issues attached)'
+  }
+  return issues.map(formatIssue).join('\n')
+}
+
+function formatIssue(issue: DecodeIssue): string {
+  const path = issue.path.length === 0 ? '<root>' : issue.path.map(String).join('.')
+  return `  - [${issue.code}] ${path}: ${issue.message}`
+}

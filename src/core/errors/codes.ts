@@ -5,4 +5,5 @@ export type HttpErrorCode =
   | 'CANCELLED'
   | 'HTTP_STATUS_ERROR'
   | 'DECODE_ERROR'
+  | 'BINARY_BODY'
   | 'UNSUPPORTED_CAPABILITY'

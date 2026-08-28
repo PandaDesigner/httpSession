@@ -18,10 +18,12 @@ Comprehensive examples for `httpSession`. Looking for the API surface? See [READ
 - [Download progress](#download-progress)
 - [Lifecycle subscriptions](#lifecycle-subscriptions)
 - [Error handling](#error-handling)
+- [Reading decode errors](#reading-decode-errors)
 - [Multiple clients](#multiple-clients)
 - [Custom transports](#custom-transports)
 - [Testing with a mocked fetch](#testing-with-a-mocked-fetch)
 - [Runtimes](#runtimes)
+- [Troubleshooting](#troubleshooting)
 
 ## Install
 
@@ -295,6 +297,7 @@ Every error class exposes a stable `code` and a `cause`:
 | `TimeoutError` | `TIMEOUT` | Deadline expired before completion |
 | `CancelledError` | `CANCELLED` | `request.cancel()` called |
 | `DecodeError` | `DECODE_ERROR` | Zod schema rejected the parsed body |
+| `BinaryBodyError` | `BINARY_BODY` | Response body looks binary/compressed (e.g. dev proxy stripped `Content-Encoding`) |
 | `InvalidRequestError` | `INVALID_REQUEST` | URL or path is malformed |
 | `UnsupportedCapabilityError` | `UNSUPPORTED_CAPABILITY` | No transport strategy supports the requested capabilities |
 
@@ -314,6 +317,35 @@ if (result.status === 'failure') {
   }
 }
 ```
+
+## Reading decode errors
+
+A `DecodeError` exposes two parallel surfaces:
+
+- `error.message` — a single human sentence: `"Response decoding failed: N issue(s)"`. Useful for a toast or a generic log line.
+- `error.issues` — a normalized `readonly { path, code, message }[]` array with **one entry per leaf failure**, ready for structured logging or rendering form-field-level errors.
+
+`error.message` is misleading for Zod 4 unions: `z.union([A, B])` collapses to a single `invalid_union` issue in Zod 4's raw output, so a wrongly-shaped payload would report `"Response decoding failed: 1 issue(s)"` even though two (or more) schemas actually failed. The package flattens those unions before exposing `issues`, so consumers always see one entry per branch failure.
+
+Use the `formatDecodeError` helper to render the issues without re-inventing the flattening logic:
+
+```ts
+import { formatDecodeError } from 'http-session-core'
+
+if (result.error.code === 'DECODE_ERROR') {
+  console.error('[api] schema rejected:\n' + formatDecodeError(result.error))
+}
+```
+
+`formatDecodeError(error)` returns one line per issue shaped as `  - [<code>] <dot.path or '<root>'>: <message>`, e.g.:
+
+```
+  - [invalid_type] id: expected number, received string
+  - [invalid_union] <root>: invalid input
+  - [too_small] items.0.qty: Number must be greater than 0
+```
+
+If `issues` is missing or empty (defensive case, shouldn't happen for `DecodeError`s produced by this package), it returns `(no issues attached)`.
 
 ## Multiple clients
 
@@ -417,3 +449,54 @@ For Bun's test runner, the same pattern works with `mock()` instead of `vi.fn()`
 | React Native | works | May need a `fetch` polyfill depending on your RN version. Inject via `FetchStrategy`. |
 
 The package does not import any runtime-specific globals at module load. Every platform primitive (`fetch`, `Headers`, `ReadableStream`, `AbortController`, `URL`) is read through a transport or inside an executor — never at the top level of a module. That keeps `httpSession` tree-shakeable and SSR-safe.
+
+## Troubleshooting
+
+### Dev proxies stripping `Content-Encoding`
+
+Symptom: `result.error.code === 'BINARY_BODY'` (since v1.2.0) or, in older versions, `result.error.code === 'DECODE_ERROR'` with a message about `"expected object, received string"`. The body you receive starts with bytes like `28 b5 2f fd` (zstd), `1f 8b` (gzip), or a wall of random-looking characters.
+
+Cause: a development proxy (Metro in Expo dev mode, `http-proxy-middleware`, Vite's proxy middleware, Charles, mitmproxy, etc.) stripped the upstream `Content-Encoding` header before forwarding the response. The client expected the body to already be decompressed but instead received the raw compressed bytes; `JSON.parse` then choked on them.
+
+Wrong fix — strip `Content-Encoding` in the proxy and call it a day:
+
+```ts
+// proxy.ts — DO NOT do this
+self.onfetch = async (event) => {
+  const response = await event.preloadResponse
+  if (!response) return
+  const headers = new Headers(response.headers)
+  headers.delete('content-encoding') // ← leaves the client reading raw bytes
+  event.respondWith(new Response(response.body, { ...response, headers }))
+}
+```
+
+Right fix — only strip `Content-Length` (which lies after transparent decompression) and let the browser/runtime decompress:
+
+```ts
+// proxy.ts — correct
+self.onfetch = async (event) => {
+  const response = await event.preloadResponse
+  if (!response) return
+  const headers = new Headers(response.headers)
+  headers.delete('content-length') // ← only strip the misleading length
+  event.respondWith(new Response(response.body, { ...response, headers }))
+}
+```
+
+If you control neither the proxy nor the upstream, ask the package to be tolerant by switching to `z.unknown()` for that endpoint and decoding the bytes yourself.
+
+### HTML error pages disguised as JSON
+
+CDN challenges (Cloudflare's `cf-mitigated: challenge` interstitial), nginx 502/503 pages, ingress controller error pages, and authentication gateways all return `200 OK` with a `text/html` body. `parseAsJson` surfaces the raw text to your schema, and Zod fails it with `DECODE_ERROR`. The fix is usually at the proxy / CDN layer, not in the consumer: forward the original status code so `HttpStatusError` (or your status policy) catches it.
+
+### `parseAsJson` silent fallback
+
+When the body fails `JSON.parse` but doesn't look binary, `parseAsJson` returns the raw string to the schema. That lets Zod produce a meaningful `DECODE_ERROR` instead of a less-typed "JSON parse failed" error. The trade-off: if the body is *almost* JSON (e.g. an HTML page that begins with `<!doctype`), you'll see `DECODE_ERROR: expected object, received string` with the schema in `error.issues`.
+
+To tell apart a real schema mismatch from "the body isn't even JSON", check the shape of `error.issues`:
+
+- A schema mismatch produces a tight, specific `invalid_type` / `invalid_format` issue at the offending path.
+- An HTML/disguised-JSON body produces one generic issue at `<root>` (e.g. `invalid_type` with `expected: object, received: string`).
+
+Since v1.2.0, bodies that look genuinely compressed or binary short-circuit *before* the schema and surface as `BinaryBodyError` (`code === 'BINARY_BODY'`) with a hex dump of the first bytes — branch on that code first.

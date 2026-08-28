@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { type DecodeIssue, type HttpResponseMetadata, decodeWithSchema } from '../../src'
+import {
+  DecodeError,
+  type DecodeIssue,
+  type HttpResponseMetadata,
+  decodeWithSchema,
+  formatDecodeError,
+} from '../../src'
 
 const okResponse: HttpResponseMetadata = {
   status: 200,
@@ -66,5 +72,54 @@ describe('decodeWithSchema', () => {
     expect(paths).toContainEqual(['b'])
     expect(result.error.cause).toBeInstanceOf(z.ZodError)
     expect(result.error.message).toBe(`Response decoding failed: ${issues.length} issue(s)`)
+  })
+})
+
+describe('formatDecodeError', () => {
+  it('renders every issue as a one-line entry, in order, with the expected shape', () => {
+    const result = decodeWithSchema(
+      z.object({ id: z.number(), name: z.string(), email: z.string().email() }),
+      { id: 'nope', name: 7, email: 'not-an-email' },
+      okResponse,
+    )
+    if (result.status !== 'failure') throw new Error('expected failure')
+
+    const formatted = formatDecodeError(result.error)
+    const lines = formatted.split('\n')
+
+    expect(lines).toHaveLength(3)
+    for (const line of lines) {
+      expect(line.startsWith('  - [')).toBe(true)
+      expect(line).toMatch(/] (?:\w+|<root>):/)
+    }
+
+    // Issues must keep their original order: id, name, email.
+    expect(lines[0]).toContain('id:')
+    expect(lines[1]).toContain('name:')
+    expect(lines[2]).toContain('email:')
+
+    // No issue path is empty here, so <root> must not appear.
+    expect(formatted).not.toContain('<root>')
+  })
+
+  it('uses <root> when an issue has an empty path', () => {
+    const schema = z.string()
+    const result = decodeWithSchema(schema, 7, okResponse)
+    if (result.status !== 'failure') throw new Error('expected failure')
+
+    const formatted = formatDecodeError(result.error)
+    expect(formatted).toContain('<root>')
+    expect(formatted.startsWith('  - [')).toBe(true)
+  })
+
+  it('returns the fallback string when the error has no issues attached', () => {
+    const error = new DecodeError('Response decoding failed: 0 issue(s)')
+    expect(formatDecodeError(error)).toBe('(no issues attached)')
+  })
+
+  it('returns the fallback string when the issues array is empty', () => {
+    const error = new DecodeError('Response decoding failed: 0 issue(s)')
+    ;(error as unknown as { issues: readonly DecodeIssue[] }).issues = []
+    expect(formatDecodeError(error)).toBe('(no issues attached)')
   })
 })
