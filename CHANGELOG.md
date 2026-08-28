@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/PandaDesigner/httpSession/compare/v1.0.0...v1.0.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **docs:** close npm badge markdown link ([66d0b04](https://github.com/PandaDesigner/httpSession/commit/66d0b04e8e01133e8efa2e0815c73acc499ec252))
+
 ## 1.0.0 (2026-08-28)
 
 
