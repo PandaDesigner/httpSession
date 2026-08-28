@@ -1,6 +1,6 @@
 {
   "name": "http-session-core",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "sideEffects": false,
   "engines": {
@@ -15,7 +15,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "prepare": "husky",
     "build": "bun run scripts/build.ts",
@@ -30,8 +35,12 @@
     "typecheck": "tsc --noEmit"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,jsonc}": ["biome check --write --no-errors-on-unmatched"],
-    "*.md": ["biome format --write --no-errors-on-unmatched"]
+    "*.{ts,tsx,js,jsx,json,jsonc}": [
+      "biome check --write --no-errors-on-unmatched"
+    ],
+    "*.md": [
+      "biome format --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "zod": "^4.4.3"
