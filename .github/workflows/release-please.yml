@@ -33,9 +33,7 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
           package: ./package.json
 
-      - name: Skip publish — NPM_TOKEN not configured
+      - name: Skip publish - NPM_TOKEN not configured
         if: ${{ secrets.NPM_TOKEN == '' && (steps.release.outputs.release_created || github.event_name == 'workflow_dispatch') }}
         run: |
-          echo "::warning::NPM_TOKEN secret is not configured in this repo."
-          echo "::warning::The GitHub Release and tag were created, but the npm publish step was skipped."
-          echo "::warning::To finish publishing, run \`npm publish --access public\` from your local checkout."
+          echo "::warning::NPM_TOKEN secret is not configured in this repo. The GitHub Release and tag were created, but the npm publish step was skipped. To finish publishing, run 'npm publish --access public' from your local checkout."
