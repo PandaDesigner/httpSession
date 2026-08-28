@@ -42,6 +42,7 @@
   },
   "json": {
     "formatter": {
+      "enabled": false,
       "indentWidth": 2,
       "trailingCommas": "none"
     }
