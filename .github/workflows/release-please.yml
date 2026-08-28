@@ -24,7 +24,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: node
-          package-name: http-session-core
 
       - name: Publish to npm
         if: steps.release.outputs.release_created
