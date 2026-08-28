@@ -2,16 +2,40 @@
 
 Thanks for your interest. This document explains how to set up a development environment, follow our workflow, and submit changes.
 
+## Branch rules (TL;DR)
+
+The repository has exactly two long-lived branches and a strict rule about how code moves between them:
+
+- **`main`** — production releases. Tagged with `vX.Y.Z`. Receives code from `develop`, never the other way around.
+- **`develop`** — integration. The base for every new `feature/*` branch. Receives hotfixes back from `main`.
+
+The two rules:
+
+1. **Releases flow `develop` → `main`.** Every `feat:` / `fix:` / `BREAKING CHANGE:` commit lands on `develop` first; a release PR then promotes `develop` into `main`, which triggers release-please to tag and publish.
+2. **Hotfixes flow `main` → `develop`.** Only for urgent fixes that cannot wait for a normal release cycle. The hotfix is committed directly on `main`, then `main` is fast-forwarded back into `develop` so the integration branch carries the fix.
+
+There is no other direction. `main` is never branched off into a long-lived side branch; `develop` is never branched off `main`.
+
+```
+                    develop ────────► main
+                       │                │
+                  feat / fix         release-please
+                       │                │
+                       │                ▼
+                       │            vX.Y.Z tag
+                       │                │
+                       └◄───────────────┘
+                       (hotfix sync)
+```
+
 ## Workflow (Git Flow)
 
-The repo uses [git-flow](https://nvie.com/posts/a-successful-git-branching-model/) with `main` as the production branch and `develop` as the integration branch:
+The repo uses [git-flow](https://nvie.com/posts/a-successful-git-branching-model/) with `main` as the production branch and `develop` as the integration branch, driven by release-please:
 
-- `main` — production releases. Tagged with `vX.Y.Z`. Never commit directly.
+- `main` — production releases. Tagged with `vX.Y.Z`. Receives code from `develop` (releases) or directly via a hotfix.
 - `develop` — integration. The base for every new `feature/*` branch.
 - `feature/<slug>` — short-lived branches for new functionality. Branched from `develop`, merged back into `develop` via PR.
-- `release/<version>` — release-candidate branches. Branched from `develop`, merged into both `main` and `develop`.
-- `hotfix/<slug>` — urgent fixes for `main`. Branched from `main`, merged into both `main` and `develop`.
-- `support/<slug>` — long-lived maintenance branches.
+- `hotfix/<slug>` — urgent fixes for `main`. Branched from `main`, merged back into `main` and then synced into `develop`.
 
 The git-flow CLI is wired (production = `main`, development = `develop`, prefixes `feature/`, `release/`, `hotfix/`, `support/`, tags `v`). Run `git flow config` to inspect.
 
@@ -36,26 +60,48 @@ git flow feature finish <slug>                         # merges feature/<slug> b
 gh pr create --base develop --head feature/<slug>
 ```
 
-## Releases
+## Releases (`develop` → `main`)
 
 When `develop` has accumulated enough work for a release:
 
 ```bash
-git flow release start 0.2.0                            # branches release/0.2.0 off develop
-# bump the version, fix last-minute bugs, regenerate CHANGELOG, etc.
-git flow release finish 0.2.0                           # merges release/0.2.0 into main + develop, tags v0.2.0
+# 1. Open a PR from develop to main with the features you want to ship.
+gh pr create --base main --head develop
+
+# 2. release-please detects the feat:/fix: commits since the last tag and
+#    opens a release PR against develop with the version bump + CHANGELOG.
+
+# 3. Review the release PR, then merge it. This squashes the release PR into
+#    develop. Force-push develop to main (or use a sync PR) so the release
+#    commit lands on main — that push triggers release-please to tag the
+#    commit and create the GitHub Release on the next workflow run.
+git push origin develop:main
+
+# 4. Confirm vX.Y.Z exists at https://github.com/PandaDesigner/httpSession/releases
+#    and that npm view http-session-core version reports the new version.
 ```
 
 The first release (`v0.1.0`) is bootstrapped manually because release-please needs at least one tag to start tracking versions.
 
-## Hotfixes
+## Hotfixes (`main` → `develop`)
 
-Urgent fixes that can't wait for a normal release flow:
+Urgent fixes that can't wait for a normal release flow. The hotfix is committed **directly on `main`** and then back-merged into `develop` so the integration branch carries the fix:
 
 ```bash
-git flow hotfix start <slug>                            # branches hotfix/<slug> off main
-# fix the bug, bump patch version
-git flow hotfix finish <slug>                           # merges hotfix/<slug> into main + develop, tags vX.Y.(Z+1)
+git checkout main
+# Make the fix using a hotfix/<slug> branch or directly on main for trivial cases
+git checkout -b hotfix/<slug>
+# ... commit the fix using a fix: prefix ...
+git checkout main && git merge --no-ff hotfix/<slug>
+git push origin main
+
+# Back-merge into develop so the integration branch carries the fix:
+git checkout develop
+git merge --ff-only origin/main
+git push origin develop
+
+# release-please will detect the fix: commit on main, open a patch release
+# PR against develop, and after the merge tag vX.Y.(Z+1) and publish.
 ```
 
 ## Testing & TDD
