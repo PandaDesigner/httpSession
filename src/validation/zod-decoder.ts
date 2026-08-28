@@ -33,17 +33,38 @@ export function decodeWithSchema<T>(
     return { status: 'success', data: result.data, response }
   }
 
-  const issues: readonly DecodeIssue[] = result.error.issues.map((issue) => ({
-    path: issue.path as readonly PropertyKey[],
-    code: issue.code,
-    message: issue.message,
-  }))
+  const issues = flattenIssues(result.error.issues)
 
-  const error = new DecodeError(
-    `Response decoding failed: ${result.error.issues.length} issue(s)`,
-    { cause: result.error },
-  )
+  const error = new DecodeError(`Response decoding failed: ${issues.length} issue(s)`, {
+    cause: result.error,
+  })
   ;(error as unknown as { issues: readonly DecodeIssue[] }).issues = issues
 
   return { status: 'failure', error }
+}
+
+function flattenIssues(rawIssues: readonly z.core.$ZodIssue[]): readonly DecodeIssue[] {
+  const out: DecodeIssue[] = []
+  for (const issue of rawIssues) {
+    if (issue.code === 'invalid_union') {
+      const branches = (issue as unknown as { errors?: readonly (readonly z.core.$ZodIssue[])[] })
+        .errors
+      if (Array.isArray(branches)) {
+        for (const branch of branches) {
+          if (Array.isArray(branch)) {
+            for (const inner of flattenIssues(branch)) {
+              out.push(inner)
+            }
+          }
+        }
+        continue
+      }
+    }
+    out.push({
+      path: issue.path as readonly PropertyKey[],
+      code: issue.code,
+      message: issue.message,
+    })
+  }
+  return out
 }

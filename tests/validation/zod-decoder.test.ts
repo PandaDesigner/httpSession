@@ -52,4 +52,19 @@ describe('decodeWithSchema', () => {
     expect(decodeWithSchema(schema, null, okResponse).status).toBe('failure')
     expect(decodeWithSchema(schema, undefined, okResponse).status).toBe('failure')
   })
+
+  it('flattens invalid_union issues so each branch failure is exposed publicly', () => {
+    const unionSchema = z.union([z.object({ a: z.string() }), z.object({ b: z.number() })])
+    const result = decodeWithSchema(unionSchema, { c: 99 }, okResponse)
+    expect(result.status).toBe('failure')
+    if (result.status !== 'failure') throw new Error('expected failure')
+
+    const issues = (result.error as unknown as { issues: readonly DecodeIssue[] }).issues
+    expect(issues.length).toBeGreaterThan(1)
+    const paths = issues.map((issue) => issue.path)
+    expect(paths).toContainEqual(['a'])
+    expect(paths).toContainEqual(['b'])
+    expect(result.error.cause).toBeInstanceOf(z.ZodError)
+    expect(result.error.message).toBe(`Response decoding failed: ${issues.length} issue(s)`)
+  })
 })
